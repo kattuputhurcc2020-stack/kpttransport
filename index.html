@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>KATTUPUTHUR MCC | Logistics Hub</title>
+    <title>KPT TRANSPORT TIMING</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { 
             --primary: #4f46e5; 
-            --report-blue: #002060;
+            --report-blue: #1e40af;
+            --green-grad: linear-gradient(135deg, #059669 0%, #10b981 100%);
             --grad: linear-gradient(135deg, #1e3a8a 0%, #4338ca 100%);
             --bg: #f8fafc;
             --card: #ffffff;
@@ -49,7 +50,6 @@
         .group { flex: 1; display: flex; flex-direction: column; gap: 6px; }
         label { font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
         input, select { padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 1rem; width: 100%; box-sizing: border-box; background: #fcfdfe; transition: 0.2s; }
-        input:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; }
         
         .time-picker-ui { display: flex; background: #f1f5f9; border-radius: 12px; padding: 2px; align-items: center; }
         .time-picker-ui select { border: none; background: transparent; font-weight: 700; padding: 10px 5px; text-align: center; }
@@ -68,28 +68,62 @@
         .list-info span { font-size: 0.75rem; color: #64748b; font-weight: 600; }
         .list-times { text-align: center; font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 5px 10px; border-radius: 8px; font-size: 0.85rem; }
         .delete-btn { color: #94a3b8; padding: 8px; cursor: pointer; transition: 0.2s; }
-        .delete-btn:hover { color: var(--danger); }
 
-        /* REPORT STYLING (Optimized for Sharing) */
-        #reportCaptureArea { 
-            background: #ffffff; padding: 40px; display: inline-block; min-width: 1000px;
+        /* UPDATED REPORT STYLING */
+        #reportCaptureArea { background: #ffffff; padding: 30px; display: inline-block; }
+        
+        .report-header-blue {
+            color: var(--report-blue);
+            font-size: 24px;
+            font-weight: 900;
+            text-align: left;
+            margin-bottom: 15px;
         }
-        #reportTitle { 
-            font-size: 32px; font-weight: 900; text-align: center; margin-bottom: 25px;
-            color: #000; text-transform: uppercase; white-space: nowrap; border-bottom: 4px solid #000; padding-bottom: 10px;
+
+        .report-table-modern-wrapper {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            border: 1px solid #000;
         }
-        .report-table { width: 100%; border-collapse: collapse; }
+
+        .report-table { width: 100%; border-collapse: collapse; border: none; }
+
+        /* Same Line Continuous Gradient for Caption Row */
+        .report-table thead tr {
+            background: var(--green-grad) !important;
+        }
+
         .report-table th { 
-            background-color: var(--report-blue); color: white; padding: 15px 10px; 
-            font-size: 18px; border: 2px solid #000; white-space: normal; line-height: 1.2;
+            color: #ffffff !important; 
+            padding: 16px 12px; 
+            font-size: 20px; 
+            font-weight: 800;
+            text-align: center;
+            text-transform: uppercase;
+            border: none;
         }
-        .report-table td { 
-            padding: 15px 8px; text-align: center; border: 2px solid #000; 
-            font-size: 22px; font-weight: 800; color: #000;
-        }
-        .late-text { color: #d00 !important; }
-        .on-time-text { color: #008000 !important; }
 
+        .report-table td { 
+            padding: 14px 12px; 
+            text-align: center; 
+            font-size: 18px; 
+            font-weight: 700; 
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        /* Zebra Striping */
+        .report-table tbody tr:nth-child(even) { background-color: #f8fafc; }
+
+        /* Specific Status Colors */
+        .status-late { color: #ff0000 !important; } /* Red for Late */
+        .status-early { color: #008000 !important; } /* Green for Early */
+        .status-ontime { color: #000000 !important; } /* Black for On Time */
+
+        .route-col { text-align: left !important; padding-left: 20px !important; color: #1e293b !important; }
+        .fit-col { width: 1%; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -123,10 +157,7 @@
             </div>
         </div>
         <button class="btn btn-primary" onclick="processEntry()"><i class="fa-solid fa-plus-circle"></i> ADD TO QUEUE</button>
-        
-        <div id="queueContainer" class="modern-list">
-            </div>
-        
+        <div id="queueContainer" class="modern-list"></div>
         <button id="saveBtn" class="btn btn-success hidden" onclick="finalizeAll()"><i class="fa-solid fa-cloud-arrow-up"></i> SAVE TO DATABASE</button>
     </div>
 
@@ -138,10 +169,12 @@
         </div>
         <button class="btn btn-primary" onclick="loadReportData()"><i class="fa-solid fa-bolt"></i> VIEW REPORT</button>
         
-        <div style="overflow-x:auto; margin-top:20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+        <div style="overflow-x:auto; margin-top:20px;">
             <div id="reportCaptureArea">
-                <div id="reportTitle">KATTUPUTHUR MCC VEHICLE IN-TIME REPORT</div>
-                <table id="reportFinalTable" class="report-table"></table>
+                <div id="dynamicTitle" class="report-header-blue">Kattuputhur MCC Vehicle in time Report</div>
+                <div class="report-table-modern-wrapper">
+                    <table id="reportFinalTable" class="report-table"></table>
+                </div>
             </div>
         </div>
         <div class="row" style="margin-top:20px;">
@@ -157,9 +190,7 @@
             <div class="group"><label>Shift</label><select id="uShift"><option value="M">Morning</option><option value="E">Evening</option></select></div>
         </div>
         <button class="btn btn-primary" onclick="loadUpdateData()">FETCH RECORDS</button>
-        
-        <div id="updateList" class="modern-list">
-            </div>
+        <div id="updateList" class="modern-list"></div>
     </div>
 
     <div id="admin" class="card hidden">
@@ -176,7 +207,7 @@
                 <div class="group"><label>E-Sch</label><input type="time" id="vNewE"></div>
             </div>
             <button class="btn btn-primary" id="vActionBtn" onclick="handleRouteSave()">SAVE ROUTE</button>
-            <table id="routeListTable" class="report-table" style="margin-top:20px; width:100%; font-size:14px;"></table>
+            <table id="routeListTable" class="report-table" style="margin-top:20px; width:100%; font-size:14px; border: 1px solid #000;"></table>
         </div>
     </div>
 
@@ -200,38 +231,24 @@
 
 <script>
     const defaults = [
-    {name: "SEVENTHIPATI", m: "08:30", e: "19:30"},
-    {name: "SENGAL", m: "08:35", e: "19:40"},
-    {name: "SALAPATTI", m: "08:40", e: "19:35"},
-    {name: "NAMAKKAL", m: "09:15", e: "20:15"},
-    {name: "PAVITHIRAM", m: "09:20", e: "20:20"},
-    {name: "MOHANUR", m: "08:45", e: "19:45"},
-    {name: "ERUMAPATTI", m: "09:10", e: "20:10"},
-    {name: "PUTHUR", m: "08:55", e: "19:55"},
-    {name: "MAYANUR", m: "09:00", e: "20:00"},
-    {name: "PANJAPATTI", m: "09:45", e: "20:45"},
-    {name: "THOTTIYAM", m: "09:25", e: "20:25"},
-    {name: "PULIYUR", m: "09:35", e: "20:35"},
-    {name: "SEVANTHIPATTI 2", m: "09:30", e: "20:30"},
-    {name: "M.N.PATTI", m: "09:40", e: "21:40"},
-    {name: "MUSIRI", m: "09:45", e: "20:30"}
-];
+        {name: "SEVENTHIPATI", m: "08:30", e: "19:30"}, {name: "SENGAL", m: "08:35", e: "19:40"},
+        {name: "SALAPATTI", m: "08:40", e: "19:35"}, {name: "NAMAKKAL", m: "09:15", e: "20:15"},
+        {name: "PAVITHIRAM", m: "09:20", e: "20:20"}, {name: "MOHANUR", m: "08:45", e: "19:45"},
+        {name: "ERUMAPATTI", m: "09:10", e: "20:10"}, {name: "PUTHUR", m: "08:55", e: "19:55"},
+        {name: "MAYANUR", m: "09:00", e: "20:00"}, {name: "PANJAPATTI", m: "09:45", e: "20:45"},
+        {name: "THOTTIYAM", m: "09:25", e: "20:25"}, {name: "PULIYUR", m: "09:35", e: "20:35"},
+        {name: "SEVANTHIPATTI 2", m: "09:30", e: "20:30"}, {name: "M.N.PATTI", m: "09:40", e: "21:40"},
+        {name: "MUSIRI", m: "09:45", e: "20:30"}
+    ];
     let routes = JSON.parse(localStorage.getItem('fleet_routes')) || defaults;
     let records = JSON.parse(localStorage.getItem('fleet_records')) || [];
     let queue = [];
     let editIdx = -1;
 
     function initApp() {
-        ['inH', 'unH'].forEach(id => {
-            const el = document.getElementById(id);
-            for(let i=1; i<=12; i++) el.innerHTML += `<option>${i.toString().padStart(2,'0')}</option>`;
-        });
-        ['inM', 'unM'].forEach(id => {
-            const el = document.getElementById(id);
-            for(let i=0; i<60; i++) el.innerHTML += `<option>${i.toString().padStart(2,'0')}</option>`;
-        });
-        populateRoutes();
-        renderAdminRoutes();
+        ['inH', 'unH'].forEach(id => { const el = document.getElementById(id); for(let i=1; i<=12; i++) el.innerHTML += `<option>${i.toString().padStart(2,'0')}</option>`; });
+        ['inM', 'unM'].forEach(id => { const el = document.getElementById(id); for(let i=0; i<60; i++) el.innerHTML += `<option>${i.toString().padStart(2,'0')}</option>`; });
+        populateRoutes(); renderAdminRoutes();
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('eDate').value = today;
         document.getElementById('rDate').value = today;
@@ -264,62 +281,50 @@
         const s = document.getElementById('eShift').value;
         const t24 = (s === 'M') ? r.m : r.e;
         let [h, m] = t24.split(':').map(Number);
-        let ap = h >= 12 ? 'PM' : 'AM';
-        h = h % 12 || 12;
+        let ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
         document.getElementById('eSchShow').value = `${h}:${m.toString().padStart(2,'0')} ${ap}`;
     }
 
     function getMinutes(t12) {
-        let [time, ap] = t12.split(' ');
-        let [h, m] = time.split(':').map(Number);
-        if(ap === 'PM' && h !== 12) h += 12;
-        if(ap === 'AM' && h === 12) h = 0;
+        let [time, ap] = t12.split(' '); let [h, m] = time.split(':').map(Number);
+        if(ap === 'PM' && h !== 12) h += 12; if(ap === 'AM' && h === 12) h = 0;
         return h * 60 + m;
+    }
+
+    function formatDuration(totalMin) {
+        if(isNaN(totalMin) || totalMin === 0) return "—";
+        const absMin = Math.abs(totalMin);
+        const hrs = Math.floor(absMin / 60);
+        const mins = absMin % 60;
+        let res = hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`;
+        return totalMin < 0 ? `-${res}` : res;
     }
 
     function processEntry() {
         const d = {
-            id: Date.now(),
-            date: document.getElementById('eDate').value,
-            shift: document.getElementById('eShift').value,
-            name: routes[document.getElementById('eVehicle').value].name,
-            sch: document.getElementById('eSchShow').value,
+            id: Date.now(), date: document.getElementById('eDate').value, shift: document.getElementById('eShift').value,
+            name: routes[document.getElementById('eVehicle').value].name, sch: document.getElementById('eSchShow').value,
             in: `${document.getElementById('inH').value}:${document.getElementById('inM').value} ${document.getElementById('inAP').value}`,
             un: `${document.getElementById('unH').value}:${document.getElementById('unM').value} ${document.getElementById('unAP').value}`
         };
-        queue.push(d);
-        queue.sort((a,b) => getMinutes(a.in) - getMinutes(b.in));
+        queue.push(d); queue.sort((a,b) => getMinutes(a.in) - getMinutes(b.in));
         renderQueue();
     }
 
     function renderQueue() {
         const container = document.getElementById('queueContainer');
-        const saveBtn = document.getElementById('saveBtn');
-        if(queue.length === 0) {
-            container.innerHTML = "";
-            saveBtn.classList.add('hidden');
-            return;
-        }
-        saveBtn.classList.remove('hidden');
+        document.getElementById('saveBtn').classList.toggle('hidden', queue.length === 0);
         container.innerHTML = queue.map((it, i) => `
             <div class="list-item">
-                <div class="list-info">
-                    <b>${it.name}</b>
-                    <span>Schedule: ${it.sch.split(' ')[0]}</span>
-                </div>
-                <div class="list-times">
-                    IN TIME: ${it.in.split(' ')[0]}<br>UN LOAD: ${it.un.split(' ')[0]}
-                </div>
-                <div class="delete-btn" onclick="queue.splice(${i},1);renderQueue()">
-                    <i class="fa-solid fa-trash-can"></i>
-                </div>
+                <div class="list-info"><b>${it.name}</b><span>Schedule: ${it.sch.split(' ')[0]}</span></div>
+                <div class="list-times">IN TIME: ${it.in.split(' ')[0]}<br>UN LOAD: ${it.un.split(' ')[0]}</div>
+                <div class="delete-btn" onclick="queue.splice(${i},1);renderQueue()"><i class="fa-solid fa-trash-can"></i></div>
             </div>
         `).join('');
     }
 
     function finalizeAll() {
-        records = records.concat(queue);
-        localStorage.setItem('fleet_records', JSON.stringify(records));
+        records = records.concat(queue); localStorage.setItem('fleet_records', JSON.stringify(records));
         queue = []; renderQueue(); alert("Saved Successfully!");
     }
 
@@ -327,21 +332,43 @@
         const d = document.getElementById('rDate').value;
         const s = document.getElementById('rShift').value;
         const filtered = records.filter(r => r.date === d && r.shift === s).sort((a,b) => getMinutes(a.in) - getMinutes(b.in));
-        const fDate = d.split('-').reverse().join('-');
-        document.getElementById('reportTitle').innerText = `Kattuputhur MCC Vechicle in time Report: ${fDate} (${s} SHIFT)`;
+        const fDate = d.split('-').reverse().join('.');
         
-        let h = `<thead><tr><th>S.NO</th><th>ROUTE NAME</th><th>SCHED. TIME</th><th>VEHICLE IN TIME</th><th>DELAY / EARLY</th><th>VEHICLE GAP</th><th>DUMPING TIME</th></tr></thead><tbody>`;
-        let lastMin = 0;
+        document.getElementById('dynamicTitle').innerText = `Kattuputhur MCC Vehicle in time Report on ${fDate} ${s} shift`;
+        
+        let h = `<thead><tr>
+                    <th class="fit-col">S.NO</th>
+                    <th class="route-col">ROUTE NAME</th>
+                    <th class="fit-col">SCHEDULE<br>TIME</th>
+                    <th class="fit-col">VEHICLE<br>IN TIME</th>
+                    <th class="fit-col">STATUS</th>
+                    <th class="fit-col">VEHICLE<br>GAP</th>
+                    <th class="fit-col">DUMPING<br>TIME</th>
+                </tr></thead><tbody>`;
+        
+        let lastInMin = 0;
         filtered.forEach((r, i) => {
             const schMin = getMinutes(r.sch);
             const inMin = getMinutes(r.in);
             const unMin = getMinutes(r.un);
             const diff = inMin - schMin;
-            let status = diff === 0 ? "On Time" : (diff > 0 ? `Late ${diff} m` : `Early ${Math.abs(diff)} m`);
-            let cls = diff === 0 ? "on-time-text" : (diff > 0 ? "late-text" : "");
-            let gap = i === 0 ? "00 m" : `${(inMin - lastMin)} m`;
-            lastMin = inMin;
-            h += `<tr><td>${i+1}</td><td style="text-align:left; padding-left:15px">${r.name}</td><td>${r.sch.split(' ')[0]}</td><td>${r.in.split(' ')[0]}</td><td class="${cls}">${status}</td><td>${gap}</td><td>${unMin-inMin} m</td></tr>`;
+            
+            let statusText = "ON TIME"; let statusCls = "status-ontime";
+            if(diff > 0) { statusText = `LATE ${formatDuration(diff)}`; statusCls = "status-late"; }
+            else if(diff < 0) { statusText = `EARLY ${formatDuration(Math.abs(diff))}`; statusCls = "status-early"; }
+
+            let gap = i === 0 ? "—" : formatDuration(inMin - lastInMin);
+            lastInMin = inMin;
+            
+            h += `<tr>
+                    <td class="fit-col">${i+1}</td>
+                    <td class="route-col">${r.name}</td>
+                    <td class="fit-col">${r.sch.split(' ')[0]}</td>
+                    <td class="fit-col">${r.in.split(' ')[0]}</td>
+                    <td class="fit-col ${statusCls}">${statusText}</td>
+                    <td class="fit-col">${gap}</td>
+                    <td class="fit-col">${formatDuration(unMin - inMin)}</td>
+                  </tr>`;
         });
         document.getElementById('reportFinalTable').innerHTML = h + "</tbody>";
     }
@@ -351,27 +378,18 @@
         const s = document.getElementById('uShift').value;
         const filtered = records.filter(r => r.date === d && r.shift === s).sort((a,b) => getMinutes(a.in) - getMinutes(b.in));
         const container = document.getElementById('updateList');
-        
-        if(!filtered.length) { container.innerHTML = "<p style='text-align:center; color:#94a3b8'>No records found</p>"; return; }
-        
+        if(!filtered.length) { container.innerHTML = "No records found"; return; }
         container.innerHTML = filtered.map(r => `
             <div class="list-item">
-                <div class="list-info">
-                    <b>${r.name}</b>
-                    <span>${r.date} | ${r.shift}</span>
-                </div>
-                <div class="list-times">
-                    IN: ${r.in.split(' ')[0]}<br>UN: ${r.un.split(' ')[0]}
-                </div>
-                <div class="delete-btn" onclick="deleteRec(${r.id})">
-                    <i class="fa-solid fa-trash-can"></i>
-                </div>
+                <div class="list-info"><b>${r.name}</b><span>${r.date} | ${r.shift}</span></div>
+                <div class="list-times">IN: ${r.in.split(' ')[0]}<br>UN: ${r.un.split(' ')[0]}</div>
+                <div class="delete-btn" onclick="deleteRec(${r.id})"><i class="fa-solid fa-trash-can"></i></div>
             </div>
         `).join('');
     }
 
     function deleteRec(id) {
-        if(confirm("Delete this record permanently?")) {
+        if(confirm("Delete record?")) {
             records = records.filter(r => r.id !== id);
             localStorage.setItem('fleet_records', JSON.stringify(records));
             loadUpdateData();
@@ -389,21 +407,16 @@
         const n = document.getElementById('vNewName').value;
         const m = document.getElementById('vNewM').value;
         const e = document.getElementById('vNewE').value;
-        if(!n || !m || !e) return alert("Fill all fields");
         if(editIdx > -1) { routes[editIdx] = {name:n, m:m, e:e}; editIdx = -1; }
         else { routes.push({name:n, m:m, e:e}); }
         localStorage.setItem('fleet_routes', JSON.stringify(routes));
         renderAdminRoutes(); populateRoutes();
-        document.getElementById('vNewName').value = "";
-        document.getElementById('vActionBtn').innerText = "SAVE ROUTE";
     }
 
     function renderAdminRoutes() {
-        let h = `<thead><tr><th>ROUTE</th><th>M</th><th>E</th><th>ACT</th></tr></thead><tbody>`;
-        routes.forEach((r, i) => {
-            h += `<tr><td>${r.name}</td><td>${r.m}</td><td>${r.e}</td><td><i class="fa fa-edit" onclick="editRoute(${i})"></i></td></tr>`;
-        });
-        document.getElementById('routeListTable').innerHTML = h + "</tbody>";
+        let h = `<tr><th>ROUTE</th><th>M</th><th>E</th><th>EDIT</th></tr>`;
+        routes.forEach((r, i) => { h += `<tr><td>${r.name}</td><td>${r.m}</td><td>${r.e}</td><td><i class="fa fa-edit" onclick="editRoute(${i})"></i></td></tr>`; });
+        document.getElementById('routeListTable').innerHTML = h;
     }
 
     function editRoute(i) {
@@ -411,18 +424,16 @@
         document.getElementById('vNewName').value = routes[i].name;
         document.getElementById('vNewM').value = routes[i].m;
         document.getElementById('vNewE').value = routes[i].e;
-        document.getElementById('vActionBtn').innerText = "UPDATE ROUTE";
     }
 
     function exportBackup() {
         const blob = new Blob([JSON.stringify({routes, records})], {type: "application/json"});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
-        a.download = `kattu_logistics_backup.json`; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup.json`; a.click();
     }
 
     function importBackup() {
         const file = document.getElementById('importFile').files[0];
-        if(!file) return alert("Select file first");
+        if(!file) return alert("Select file");
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
@@ -438,18 +449,15 @@
     }
 
     function downloadReportImage() {
-        const el = document.getElementById("reportCaptureArea");
-        html2canvas(el, { scale: 3 }).then(canvas => {
+        html2canvas(document.getElementById("reportCaptureArea"), { scale: 3 }).then(canvas => {
             const link = document.createElement('a');
-            link.download = `Report_${document.getElementById('rDate').value}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
+            link.download = `Logistics_Report.png`; link.href = canvas.toDataURL(); link.click();
         });
     }
 
     function exportToExcel() {
         const wb = XLSX.utils.table_to_book(document.getElementById("reportFinalTable"));
-        XLSX.writeFile(wb, `Logistics_Report_${document.getElementById('rDate').value}.xlsx`);
+        XLSX.writeFile(wb, `Logistics_Report.xlsx`);
     }
 
     initApp();
