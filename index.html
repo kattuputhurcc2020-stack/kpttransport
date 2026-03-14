@@ -126,6 +126,22 @@
         .fit-col { width: 1%; }
         .hidden { display: none !important; }
     </style>
+
+<style>
+.rmrd-header{
+background: linear-gradient(135deg,#059669 0%,#10b981 100%);
+color:white;
+font-weight:900;
+text-align:center;
+}
+.rmrd-net{
+font-weight:900;
+font-size:20px;
+text-align:center;
+background:#ecfdf5;
+}
+</style>
+
 </head>
 <body>
 
@@ -221,8 +237,62 @@
     </div>
 </div>
 
+
+<div id="rmrdTab" class="card hidden">
+    <span class="section-title">RMRD Collection Entry</span>
+
+    <div class="row">
+        <div class="group">
+            <label>Date</label>
+            <input type="date" id="rmrdDate">
+        </div>
+        <div class="group">
+            <label>Shift</label>
+            <select id="rmrdShift">
+                <option value="M">Morning</option>
+                <option value="E">Evening</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="group">
+            <label>Reception End Time</label>
+            <input type="time" id="rmrdEnd">
+        </div>
+        <div class="group">
+            <label>Total Collection</label>
+            <input type="number" id="rmrdTotal">
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="group">
+            <label>Drip Saver</label>
+            <input type="number" id="rmrdDrip">
+        </div>
+        <div class="group">
+            <label>Spillage</label>
+            <input type="number" id="rmrdSpillage">
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="group">
+            <label>Spoilage</label>
+            <input type="number" id="rmrdSpoilage">
+        </div>
+    </div>
+
+    <button class="btn btn-success" onclick="saveRMRD()">
+        <i class="fa-solid fa-save"></i> SAVE RMRD
+    </button>
+</div>
+
+
 <nav class="tabs">
     <button onclick="switchTab(event,'entry')" class="active"><i class="fa-solid fa-plus-circle"></i>ENTRY</button>
+    <button onclick="switchTab(event,'rmrdTab')"><i class="fa-solid fa-flask"></i>RMRD</button>
     <button onclick="switchTab(event,'report')"><i class="fa-solid fa-file-invoice"></i>REPORT</button>
     <button onclick="switchTab(event,'updateTab')"><i class="fa-solid fa-pen-to-square"></i>UPDATE</button>
     <button onclick="switchTab(event,'admin')"><i class="fa-solid fa-gears"></i>ADMIN</button>
@@ -244,8 +314,70 @@
     let records = JSON.parse(localStorage.getItem('fleet_records')) || [];
     let queue = [];
     let editIdx = -1;
+    let rmrdRecords = JSON.parse(localStorage.getItem('rmrd_records')) || [];
 
-    function initApp() {
+    
+
+
+function editRMRD(i){
+let r = rmrdRecords[i];
+document.getElementById('rmrdDate').value=r.date;
+document.getElementById('rmrdShift').value=r.shift;
+document.getElementById('rmrdEnd').value=r.end;
+document.getElementById('rmrdTotal').value=r.total;
+document.getElementById('rmrdDrip').value=r.drip;
+document.getElementById('rmrdSpillage').value=r.spillage;
+document.getElementById('rmrdSpoilage').value=r.spoilage;
+rmrdRecords.splice(i,1);
+localStorage.setItem("rmrd_records",JSON.stringify(rmrdRecords));
+alert("Edit mode: update values and save again");
+}
+
+function deleteRMRD(index){
+if(confirm("Delete RMRD record?")){
+rmrdRecords.splice(index,1);
+localStorage.setItem("rmrd_records", JSON.stringify(rmrdRecords));
+alert("RMRD Deleted");
+}
+}
+
+
+function saveRMRD(){
+
+const data = {
+date: document.getElementById("rmrdDate").value,
+shift: document.getElementById("rmrdShift").value,
+end: document.getElementById("rmrdEnd").value,
+total: Number(document.getElementById("rmrdTotal").value),
+drip: Number(document.getElementById("rmrdDrip").value),
+spillage: Number(document.getElementById("rmrdSpillage").value),
+spoilage: Number(document.getElementById("rmrdSpoilage").value)
+};
+
+data.net = data.total + data.drip;
+
+/* CHECK IF RECORD ALREADY EXISTS */
+let index = rmrdRecords.findIndex(r => r.date === data.date && r.shift === data.shift);
+
+if(index > -1){
+
+    // UPDATE EXISTING RECORD
+    rmrdRecords[index] = data;
+    alert("RMRD Updated Successfully");
+
+}else{
+
+    // ADD NEW RECORD
+    rmrdRecords.push(data);
+    alert("RMRD Saved Successfully");
+
+}
+
+localStorage.setItem("rmrd_records", JSON.stringify(rmrdRecords));
+
+}
+
+function initApp() {
         ['inH', 'unH'].forEach(id => { const el = document.getElementById(id); for(let i=1; i<=12; i++) el.innerHTML += `<option>${i.toString().padStart(2,'0')}</option>`; });
         ['inM', 'unM'].forEach(id => { const el = document.getElementById(id); for(let i=0; i<60; i++) el.innerHTML += `<option>${i.toString().padStart(2,'0')}</option>`; });
         populateRoutes(); renderAdminRoutes();
@@ -253,6 +385,8 @@
         document.getElementById('eDate').value = today;
         document.getElementById('rDate').value = today;
         document.getElementById('uDate').value = today;
+        if(document.getElementById('rmrdDate')) document.getElementById('rmrdDate').value = today;
+        if(document.getElementById('rmrdShift')) document.getElementById('rmrdShift').value = document.getElementById('eShift').value;
         handleShiftChange();
     }
 
@@ -370,7 +504,50 @@
                     <td class="fit-col">${formatDuration(unMin - inMin)}</td>
                   </tr>`;
         });
-        document.getElementById('reportFinalTable').innerHTML = h + "</tbody>";
+        
+let tableHTML = h + "</tbody>";
+
+const rmrd = rmrdRecords.find(r => r.date === d && r.shift === s);
+
+if(rmrd){
+
+tableHTML += `
+<tr>
+<td colspan="7" style="font-weight:900;font-size:20px;background:#f1f5f9;text-align:center">
+<span style='color:white'><span style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:6px 12px;border-radius:6px">RMRD COLLECTION DETAILS</span>
+</td>
+</tr>
+
+
+
+<tr>
+<td>1</td><td colspan="5" class="route-col" style="text-align:left">Reception End Time</td><td>${rmrd.end}</td>
+</tr>
+
+<tr>
+<td>2</td><td colspan="5" class="route-col" style="text-align:left">Total Collection</td><td>${rmrd.total}</td>
+</tr>
+
+<tr>
+<td>3</td><td colspan="5" class="route-col" style="text-align:left">Drip Saver</td><td>${rmrd.drip}</td>
+</tr>
+
+<tr style="background:#ecfdf5;font-weight:900;text-align:center">
+<td>4</td><td colspan="5" style="font-weight:900;text-align:left">Net Collection</td><td style="font-weight:900">${rmrd.net}</td>
+</tr>
+
+<tr>
+<td>5</td><td colspan="5" class="route-col" style="text-align:left">Spillage</td><td>${rmrd.spillage}</td>
+</tr>
+
+<tr>
+<td>6</td><td colspan="5" class="route-col" style="text-align:left">Spoilage</td><td>${rmrd.spoilage}</td>
+</tr>
+`;
+}
+
+document.getElementById('reportFinalTable').innerHTML = tableHTML;
+
     }
 
     function loadUpdateData() {
