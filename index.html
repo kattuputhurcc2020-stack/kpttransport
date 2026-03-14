@@ -342,19 +342,28 @@ alert("RMRD Deleted");
 }
 
 
+
+function to12Hour(t){
+ if(!t) return "";
+ let [h,m]=t.split(":").map(Number);
+ let ap = h>=12 ? "PM":"AM";
+ h = h%12 || 12;
+ return `${h.toString().padStart(2,"0")}:${m.toString().padStart(2,"0")} ${ap}`;
+}
+
 function saveRMRD(){
 
 const data = {
 date: document.getElementById("rmrdDate").value,
 shift: document.getElementById("rmrdShift").value,
-end: document.getElementById("rmrdEnd").value,
+end: to12Hour(document.getElementById("rmrdEnd").value),
 total: Number(document.getElementById("rmrdTotal").value),
 drip: Number(document.getElementById("rmrdDrip").value),
 spillage: Number(document.getElementById("rmrdSpillage").value),
 spoilage: Number(document.getElementById("rmrdSpoilage").value)
 };
 
-data.net = data.total + data.drip;
+data.net = Number((data.total + data.drip).toFixed(2));
 
 /* CHECK IF RECORD ALREADY EXISTS */
 let index = rmrdRecords.findIndex(r => r.date === data.date && r.shift === data.shift);
@@ -462,7 +471,19 @@ function initApp() {
         queue = []; renderQueue(); alert("Saved Successfully!");
     }
 
-    function loadReportData() {
+    
+function format12Hour(time){
+if(!time) return "";
+if(time.includes("AM") || time.includes("PM")) return time;
+
+let [h,m] = time.split(":").map(Number);
+let ap = h >= 12 ? "PM" : "AM";
+h = h % 12 || 12;
+
+return h.toString().padStart(2,"0")+":"+m.toString().padStart(2,"0")+" "+ap;
+}
+
+function loadReportData() {
         const d = document.getElementById('rDate').value;
         const s = document.getElementById('rShift').value;
         const filtered = records.filter(r => r.date === d && r.shift === s).sort((a,b) => getMinutes(a.in) - getMinutes(b.in));
@@ -521,7 +542,7 @@ tableHTML += `
 
 
 <tr>
-<td>1</td><td colspan="5" class="route-col" style="text-align:left">Reception End Time</td><td>${rmrd.end}</td>
+<td>1</td><td colspan="5" class="route-col" style="text-align:left">Reception End Time</td><td>${format12Hour(rmrd.end)}</td>
 </tr>
 
 <tr>
@@ -533,7 +554,7 @@ tableHTML += `
 </tr>
 
 <tr style="background:#ecfdf5;font-weight:900;text-align:center">
-<td>4</td><td colspan="5" style="font-weight:900;text-align:left">Net Collection</td><td style="font-weight:900">${rmrd.net}</td>
+<td>4</td><td colspan="5" style="font-weight:900;text-align:left">Net Collection</td><td style="font-weight:900">${Number(rmrd.net).toFixed(2)}</td>
 </tr>
 
 <tr>
@@ -628,13 +649,13 @@ document.getElementById('reportFinalTable').innerHTML = tableHTML;
     function downloadReportImage() {
         html2canvas(document.getElementById("reportCaptureArea"), { scale: 3 }).then(canvas => {
             const link = document.createElement('a');
-            link.download = `Logistics_Report.png`; link.href = canvas.toDataURL(); link.click();
+            const d=document.getElementById("rDate").value||"report"; const s=document.getElementById("rShift").value||""; link.download = `Vehicle_Report_${d}_${s}.png`; link.href = canvas.toDataURL(); link.click();
         });
     }
 
     function exportToExcel() {
         const wb = XLSX.utils.table_to_book(document.getElementById("reportFinalTable"));
-        XLSX.writeFile(wb, `Logistics_Report.xlsx`);
+        const d=document.getElementById("rDate").value||"report"; const s=document.getElementById("rShift").value||""; XLSX.writeFile(wb, `Vehicle_Report_${d}_${s}.xlsx`);
     }
 
     initApp();
